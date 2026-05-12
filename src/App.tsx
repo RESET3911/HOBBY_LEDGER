@@ -1,15 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Hobby, HobbyLog, User } from './types';
-import { subscribeHobbies, subscribeLogs, saveHobby, deleteHobby, saveLog, deleteLog } from './utils/storage';
+import { Hobby, HobbyGoals, HobbyLedgerSettings, HobbyLog, User } from './types';
+import {
+  subscribeHobbies, subscribeLogs, subscribeSettings,
+  saveHobby, deleteHobby, saveLog, deleteLog, saveSettings,
+} from './utils/storage';
+import { notifyLogAdded } from './utils/notify';
 import UserSelectScreen from './components/UserSelectScreen';
 import HobbyListScreen from './components/HobbyListScreen';
 import HobbyDetailScreen from './components/HobbyDetailScreen';
 import AddLogScreen from './components/AddLogScreen';
 import DashboardScreen from './components/DashboardScreen';
+import YearlySummaryScreen from './components/YearlySummaryScreen';
 import AddHobbyModal from './components/AddHobbyModal';
+import SettingsModal from './components/SettingsModal';
 import Toast from './components/Toast';
 
-type Screen = 'userSelect' | 'hobbyList' | 'hobbyDetail' | 'addLog' | 'dashboard';
+type Screen = 'userSelect' | 'hobbyList' | 'hobbyDetail' | 'addLog' | 'dashboard' | 'yearSummary';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -18,8 +24,10 @@ export default function App() {
   const [editLogId, setEditLogId] = useState<string | null>(null);
   const [hobbies, setHobbies] = useState<Hobby[]>([]);
   const [logs, setLogs] = useState<HobbyLog[]>([]);
+  const [settings, setSettings] = useState<HobbyLedgerSettings>({ ntfyTopic: '' });
   const [loading, setLoading] = useState(true);
   const [showAddHobby, setShowAddHobby] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   useEffect(() => {
@@ -28,7 +36,8 @@ export default function App() {
       () => { setLoading(false); setToast('DB接続エラーが発生しました'); }
     );
     const unsubLogs = subscribeLogs(items => setLogs(items));
-    return () => { unsubHobbies(); unsubLogs(); };
+    const unsubSettings = subscribeSettings(s => setSettings(s));
+    return () => { unsubHobbies(); unsubLogs(); unsubSettings(); };
   }, []);
 
   const handleSelectUser = (user: User) => {
@@ -49,8 +58,7 @@ export default function App() {
   const handleDeleteHobby = useCallback(async (hobbyId: string) => {
     try {
       await deleteHobby(hobbyId);
-      const hobbyLogs = logs.filter(l => l.hobbyId === hobbyId);
-      await Promise.all(hobbyLogs.map(l => deleteLog(l.id)));
+      await Promise.all(logs.filter(l => l.hobbyId === hobbyId).map(l => deleteLog(l.id)));
       setSelectedHobbyId(null);
       setScreen('hobbyList');
     } catch { setToast('削除に失敗しました'); }
@@ -62,16 +70,32 @@ export default function App() {
     try { await saveHobby({ ...hobby, tags }); } catch { setToast('保存に失敗しました'); }
   }, [hobbies, selectedHobbyId]);
 
+  const handleUpdateGoals = useCallback(async (goals: HobbyGoals) => {
+    const hobby = hobbies.find(h => h.id === selectedHobbyId);
+    if (!hobby) return;
+    try { await saveHobby({ ...hobby, goals }); } catch { setToast('保存に失敗しました'); }
+  }, [hobbies, selectedHobbyId]);
+
   const handleSaveLog = useCallback(async (log: HobbyLog) => {
     try {
       await saveLog(log);
       setEditLogId(null);
       setScreen('hobbyDetail');
+      if (settings.ntfyTopic && currentUser) {
+        const hobby = hobbies.find(h => h.id === log.hobbyId);
+        if (hobby) {
+          notifyLogAdded(log.user, hobby.name, log.title, log.duration, settings.ntfyTopic).catch(() => {});
+        }
+      }
     } catch { setToast('保存に失敗しました'); }
-  }, []);
+  }, [settings, currentUser, hobbies]);
 
   const handleDeleteLog = useCallback(async (logId: string) => {
     try { await deleteLog(logId); } catch { setToast('削除に失敗しました'); }
+  }, []);
+
+  const handleSaveSettings = useCallback(async (s: HobbyLedgerSettings) => {
+    try { await saveSettings(s); } catch { setToast('保存に失敗しました'); }
   }, []);
 
   if (loading) {
@@ -94,7 +118,6 @@ export default function App() {
       {screen === 'userSelect' && (
         <UserSelectScreen onSelect={handleSelectUser} />
       )}
-
       {screen === 'hobbyList' && currentUser && (
         <HobbyListScreen
           currentUser={currentUser}
@@ -104,9 +127,9 @@ export default function App() {
           onAddHobby={() => setShowAddHobby(true)}
           onDashboard={() => setScreen('dashboard')}
           onSwitchUser={() => { setCurrentUser(null); setScreen('userSelect'); }}
+          onOpenSettings={() => setShowSettings(true)}
         />
       )}
-
       {screen === 'hobbyDetail' && selectedHobby && (
         <HobbyDetailScreen
           hobby={selectedHobby}
@@ -118,9 +141,9 @@ export default function App() {
           onDeleteLog={handleDeleteLog}
           onDeleteHobby={() => handleDeleteHobby(selectedHobby.id)}
           onUpdateTags={handleUpdateTags}
+          onUpdateGoals={handleUpdateGoals}
         />
       )}
-
       {screen === 'addLog' && selectedHobby && currentUser && (
         <AddLogScreen
           currentUser={currentUser}
@@ -130,22 +153,27 @@ export default function App() {
           onBack={() => { setEditLogId(null); setScreen('hobbyDetail'); }}
         />
       )}
-
       {screen === 'dashboard' && (
         <DashboardScreen
           hobbies={hobbies}
           logs={logs}
           onBack={() => setScreen('hobbyList')}
+          onYearlySummary={() => setScreen('yearSummary')}
         />
       )}
-
+      {screen === 'yearSummary' && (
+        <YearlySummaryScreen
+          hobbies={hobbies}
+          logs={logs}
+          onBack={() => setScreen('dashboard')}
+        />
+      )}
       {showAddHobby && (
-        <AddHobbyModal
-          onSave={handleAddHobby}
-          onClose={() => setShowAddHobby(false)}
-        />
+        <AddHobbyModal onSave={handleAddHobby} onClose={() => setShowAddHobby(false)} />
       )}
-
+      {showSettings && (
+        <SettingsModal settings={settings} onSave={handleSaveSettings} onClose={() => setShowSettings(false)} />
+      )}
       {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </>
   );

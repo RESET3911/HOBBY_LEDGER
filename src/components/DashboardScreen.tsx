@@ -4,11 +4,13 @@ import {
 } from 'recharts';
 import { Hobby, HobbyLog, User } from '../types';
 import { formatDuration, formatAmount, formatCostPerHour, getLast6Months } from '../utils/format';
+import { calcStreak } from '../utils/streak';
 
 interface Props {
   hobbies: Hobby[];
   logs: HobbyLog[];
   onBack: () => void;
+  onYearlySummary: () => void;
 }
 
 const USER_COLORS: Record<User, string> = {
@@ -16,10 +18,12 @@ const USER_COLORS: Record<User, string> = {
   れな: '#ec4899',
 };
 
-export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
+export default function DashboardScreen({ hobbies, logs, onBack, onYearlySummary }: Props) {
   const totalSessions = logs.length;
   const totalDuration = logs.reduce((s, l) => s + l.duration, 0);
   const totalAmount = logs.reduce((s, l) => s + l.amount, 0);
+  const hasAmount = totalAmount > 0;
+  const { current: streak } = calcStreak(logs);
 
   const kenshinLogs = logs.filter(l => l.user === 'けんしん');
   const renaLogs = logs.filter(l => l.user === 'れな');
@@ -30,12 +34,14 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
       sessions: kenshinLogs.length,
       duration: kenshinLogs.reduce((s, l) => s + l.duration, 0),
       amount: kenshinLogs.reduce((s, l) => s + l.amount, 0),
+      streak: calcStreak(kenshinLogs).current,
     },
     {
       user: 'れな' as User,
       sessions: renaLogs.length,
       duration: renaLogs.reduce((s, l) => s + l.duration, 0),
       amount: renaLogs.reduce((s, l) => s + l.amount, 0),
+      streak: calcStreak(renaLogs).current,
     },
   ];
 
@@ -62,20 +68,23 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
     return {
       label,
       時間: Math.round(ml.reduce((s, l) => s + l.duration, 0) / 60 * 10) / 10,
-      支出: ml.reduce((s, l) => s + l.amount, 0),
     };
   });
-
-  const hasAmount = totalAmount > 0;
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #f5f3ff 0%, #ecfdf5 100%)' }}>
       <div className="flex items-center gap-3 px-5 pt-12 pb-4">
         <button onClick={onBack} className="text-gray-400 text-2xl leading-none">‹</button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-lg font-bold text-gray-800">総合ダッシュボード</h1>
           <p className="text-sm text-gray-400">全趣味の統計</p>
         </div>
+        <button
+          onClick={onYearlySummary}
+          className="text-xs bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-100 text-violet-600 font-medium"
+        >
+          年間 ›
+        </button>
       </div>
 
       <div className="flex-1 px-5 pb-10 space-y-4">
@@ -99,23 +108,27 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
               <div className="text-xs text-gray-400">時間単価</div>
             </div>
           </div>
+          {streak > 0 && (
+            <div className="mt-3 text-center text-sm text-orange-400 font-medium">🔥 2人合計 {streak}日連続記録中！</div>
+          )}
         </div>
 
         {/* User comparison */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-xs font-semibold text-gray-400 mb-3">ユーザー別</p>
           <div className="grid grid-cols-2 gap-3">
-            {userStats.map(({ user, sessions, duration, amount }) => (
+            {userStats.map(({ user, sessions, duration, amount, streak: uStreak }) => (
               <div
                 key={user}
                 className="rounded-xl p-3 text-white"
                 style={{ background: `linear-gradient(135deg, ${USER_COLORS[user]}, ${USER_COLORS[user]}99)` }}
               >
-                <div className="text-sm font-bold mb-2">{user}</div>
+                <div className="text-sm font-bold mb-1">{user}</div>
                 <div className="text-xs opacity-90">{sessions}回</div>
                 <div className="text-xs opacity-90">{formatDuration(duration)}</div>
                 {amount > 0 && <div className="text-xs opacity-90">{formatAmount(amount)}</div>}
-                <div className="text-xs opacity-90 mt-1 font-semibold">{formatCostPerHour(amount, duration)}</div>
+                <div className="text-xs font-semibold mt-1 opacity-90">{formatCostPerHour(amount, duration)}</div>
+                {uStreak > 0 && <div className="text-xs mt-1">🔥 {uStreak}日連続</div>}
               </div>
             ))}
           </div>
@@ -130,21 +143,13 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip
-                  formatter={(value: number, name: string) => {
-                    if (name === '時間') return [`${value}h`, '活動時間'];
-                    return [value, name];
-                  }}
-                />
+                <Tooltip />
                 <Bar dataKey="時間" radius={[4, 4, 0, 0]}>
-                  {hobbyCompare.map((entry, index) => (
-                    <Cell key={index} fill={entry.color} />
-                  ))}
+                  {hobbyCompare.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-            {/* ¥/h per hobby */}
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
               {hobbyCompare.filter(h => h.yph !== null).map(h => (
                 <span key={h.name} className="text-xs text-gray-500">
                   {h.name} <span className="font-semibold text-violet-600">¥{h.yph?.toLocaleString()}/h</span>
@@ -162,9 +167,7 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
               <ResponsiveContainer width="50%" height={160}>
                 <PieChart>
                   <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={70} innerRadius={35}>
-                    {pieData.map((entry, index) => (
-                      <Cell key={index} fill={entry.color} />
-                    ))}
+                    {pieData.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                   </Pie>
                   <Tooltip formatter={(v: number) => formatAmount(v)} />
                 </PieChart>

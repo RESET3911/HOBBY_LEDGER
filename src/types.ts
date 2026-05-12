@@ -6,6 +6,7 @@ export interface Hobby {
   emoji: string;
   color: string;
   createdAt: string;
+  tags?: string[];
 }
 
 export interface HobbyLog {
@@ -13,8 +14,10 @@ export interface HobbyLog {
   hobbyId: string;
   user: User;
   date: string;
+  title: string;
   duration: number;
   amount: number;
   memo: string;
+  tags?: string[];
   createdAt: string;
 }

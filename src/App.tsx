@@ -43,11 +43,7 @@ export default function App() {
   };
 
   const handleAddHobby = useCallback(async (hobby: Hobby) => {
-    try {
-      await saveHobby(hobby);
-    } catch {
-      setToast('保存に失敗しました');
-    }
+    try { await saveHobby(hobby); } catch { setToast('保存に失敗しました'); }
   }, []);
 
   const handleDeleteHobby = useCallback(async (hobbyId: string) => {
@@ -57,27 +53,25 @@ export default function App() {
       await Promise.all(hobbyLogs.map(l => deleteLog(l.id)));
       setSelectedHobbyId(null);
       setScreen('hobbyList');
-    } catch {
-      setToast('削除に失敗しました');
-    }
+    } catch { setToast('削除に失敗しました'); }
   }, [logs]);
+
+  const handleUpdateTags = useCallback(async (tags: string[]) => {
+    const hobby = hobbies.find(h => h.id === selectedHobbyId);
+    if (!hobby) return;
+    try { await saveHobby({ ...hobby, tags }); } catch { setToast('保存に失敗しました'); }
+  }, [hobbies, selectedHobbyId]);
 
   const handleSaveLog = useCallback(async (log: HobbyLog) => {
     try {
       await saveLog(log);
       setEditLogId(null);
       setScreen('hobbyDetail');
-    } catch {
-      setToast('保存に失敗しました');
-    }
+    } catch { setToast('保存に失敗しました'); }
   }, []);
 
   const handleDeleteLog = useCallback(async (logId: string) => {
-    try {
-      await deleteLog(logId);
-    } catch {
-      setToast('削除に失敗しました');
-    }
+    try { await deleteLog(logId); } catch { setToast('削除に失敗しました'); }
   }, []);
 
   if (loading) {
@@ -123,6 +117,7 @@ export default function App() {
           onEditLog={id => { setEditLogId(id); setScreen('addLog'); }}
           onDeleteLog={handleDeleteLog}
           onDeleteHobby={() => handleDeleteHobby(selectedHobby.id)}
+          onUpdateTags={handleUpdateTags}
         />
       )}
 

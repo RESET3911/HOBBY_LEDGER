@@ -1,10 +1,9 @@
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell,
-  AreaChart, Area,
+  ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
 import { Hobby, HobbyLog, User } from '../types';
-import { formatDuration, formatAmount, getLast6Months } from '../utils/format';
+import { formatDuration, formatAmount, formatCostPerHour, getLast6Months } from '../utils/format';
 
 interface Props {
   hobbies: Hobby[];
@@ -40,23 +39,23 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
     },
   ];
 
-  // Hobby comparison (all-time hours)
   const hobbyCompare = hobbies.map(h => {
     const hl = logs.filter(l => l.hobbyId === h.id);
+    const dur = hl.reduce((s, l) => s + l.duration, 0);
+    const amt = hl.reduce((s, l) => s + l.amount, 0);
     return {
       name: h.emoji + h.name,
-      時間: Math.round(hl.reduce((s, l) => s + l.duration, 0) / 60 * 10) / 10,
-      支出: hl.reduce((s, l) => s + l.amount, 0),
+      時間: Math.round(dur / 60 * 10) / 10,
+      支出: amt,
       color: h.color,
+      yph: dur > 0 ? Math.round(amt / (dur / 60)) : null,
     };
   }).filter(h => h.時間 > 0 || h.支出 > 0);
 
-  // Pie chart (spending by hobby)
   const pieData = hobbies
     .map(h => ({ name: h.name, value: logs.filter(l => l.hobbyId === h.id).reduce((s, l) => s + l.amount, 0), color: h.color }))
     .filter(d => d.value > 0);
 
-  // Monthly trend (last 6 months)
   const months = getLast6Months();
   const monthlyTrend = months.map(({ key, label }) => {
     const ml = logs.filter(l => l.date.startsWith(key));
@@ -71,7 +70,6 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(160deg, #f5f3ff 0%, #ecfdf5 100%)' }}>
-      {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-12 pb-4">
         <button onClick={onBack} className="text-gray-400 text-2xl leading-none">‹</button>
         <div>
@@ -83,18 +81,22 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
       <div className="flex-1 px-5 pb-10 space-y-4">
         {/* Total stats */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-2 text-center">
             <div>
               <div className="text-2xl font-bold text-gray-800">{totalSessions}</div>
-              <div className="text-xs text-gray-400">総セッション</div>
+              <div className="text-xs text-gray-400">総回数</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-gray-800">{formatDuration(totalDuration)}</div>
-              <div className="text-xs text-gray-400">総活動時間</div>
+              <div className="text-sm font-bold text-gray-800">{formatDuration(totalDuration)}</div>
+              <div className="text-xs text-gray-400">総時間</div>
             </div>
             <div>
-              <div className="text-lg font-bold text-gray-800">{hasAmount ? formatAmount(totalAmount) : '―'}</div>
+              <div className="text-sm font-bold text-gray-800">{hasAmount ? formatAmount(totalAmount) : '―'}</div>
               <div className="text-xs text-gray-400">総支出</div>
+            </div>
+            <div>
+              <div className="text-sm font-bold text-violet-600">{formatCostPerHour(totalAmount, totalDuration)}</div>
+              <div className="text-xs text-gray-400">時間単価</div>
             </div>
           </div>
         </div>
@@ -110,15 +112,16 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
                 style={{ background: `linear-gradient(135deg, ${USER_COLORS[user]}, ${USER_COLORS[user]}99)` }}
               >
                 <div className="text-sm font-bold mb-2">{user}</div>
-                <div className="text-xs opacity-90">{sessions}セッション</div>
+                <div className="text-xs opacity-90">{sessions}回</div>
                 <div className="text-xs opacity-90">{formatDuration(duration)}</div>
                 {amount > 0 && <div className="text-xs opacity-90">{formatAmount(amount)}</div>}
+                <div className="text-xs opacity-90 mt-1 font-semibold">{formatCostPerHour(amount, duration)}</div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Hobby comparison: hours */}
+        {/* Hobby comparison */}
         {hobbyCompare.length > 0 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 mb-3">趣味別 活動時間（時間）</p>
@@ -127,7 +130,12 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
+                <Tooltip
+                  formatter={(value: number, name: string) => {
+                    if (name === '時間') return [`${value}h`, '活動時間'];
+                    return [value, name];
+                  }}
+                />
                 <Bar dataKey="時間" radius={[4, 4, 0, 0]}>
                   {hobbyCompare.map((entry, index) => (
                     <Cell key={index} fill={entry.color} />
@@ -135,10 +143,18 @@ export default function DashboardScreen({ hobbies, logs, onBack }: Props) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            {/* ¥/h per hobby */}
+            <div className="mt-3 flex flex-wrap gap-2">
+              {hobbyCompare.filter(h => h.yph !== null).map(h => (
+                <span key={h.name} className="text-xs text-gray-500">
+                  {h.name} <span className="font-semibold text-violet-600">¥{h.yph?.toLocaleString()}/h</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Pie chart: spending by hobby */}
+        {/* Spending pie */}
         {pieData.length > 0 && (
           <div className="bg-white rounded-2xl p-4 shadow-sm">
             <p className="text-xs font-semibold text-gray-400 mb-3">趣味別 支出</p>

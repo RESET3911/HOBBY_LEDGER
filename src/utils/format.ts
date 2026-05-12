@@ -15,6 +15,12 @@ export function formatAmount(amount: number): string {
   return `¥${amount.toLocaleString()}`;
 }
 
+export function formatCostPerHour(totalAmount: number, totalMinutes: number): string {
+  if (totalMinutes === 0) return '―';
+  const perHour = Math.round(totalAmount / (totalMinutes / 60));
+  return `¥${perHour.toLocaleString()}/h`;
+}
+
 export function today(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;

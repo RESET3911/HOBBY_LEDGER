@@ -2,7 +2,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area,
 } from 'recharts';
-import { Hobby, HobbyLog, User } from '../types';
+import { Hobby, HobbyLog, User, USER_LABELS } from '../types';
 import { formatDuration, formatAmount, formatCostPerHour, getLast6Months } from '../utils/format';
 import { calcStreak } from '../utils/streak';
 
@@ -14,8 +14,8 @@ interface Props {
 }
 
 const USER_COLORS: Record<User, string> = {
-  けんしん: '#3b82f6',
-  れな: '#ec4899',
+  kenshin: '#3b82f6',
+  rena: '#ec4899',
 };
 
 export default function DashboardScreen({ hobbies, logs, onBack, onYearlySummary }: Props) {
@@ -25,19 +25,19 @@ export default function DashboardScreen({ hobbies, logs, onBack, onYearlySummary
   const hasAmount = totalAmount > 0;
   const { current: streak } = calcStreak(logs);
 
-  const kenshinLogs = logs.filter(l => l.user === 'けんしん');
-  const renaLogs = logs.filter(l => l.user === 'れな');
+  const kenshinLogs = logs.filter(l => l.user === 'kenshin');
+  const renaLogs = logs.filter(l => l.user === 'rena');
 
   const userStats = [
     {
-      user: 'けんしん' as User,
+      user: 'kenshin' as User,
       sessions: kenshinLogs.length,
       duration: kenshinLogs.reduce((s, l) => s + l.duration, 0),
       amount: kenshinLogs.reduce((s, l) => s + l.amount, 0),
       streak: calcStreak(kenshinLogs).current,
     },
     {
-      user: 'れな' as User,
+      user: 'rena' as User,
       sessions: renaLogs.length,
       duration: renaLogs.reduce((s, l) => s + l.duration, 0),
       amount: renaLogs.reduce((s, l) => s + l.amount, 0),
@@ -123,7 +123,7 @@ export default function DashboardScreen({ hobbies, logs, onBack, onYearlySummary
                 className="rounded-xl p-3 text-white"
                 style={{ background: `linear-gradient(135deg, ${USER_COLORS[user]}, ${USER_COLORS[user]}99)` }}
               >
-                <div className="text-sm font-bold mb-1">{user}</div>
+                <div className="text-sm font-bold mb-1">{USER_LABELS[user]}</div>
                 <div className="text-xs opacity-90">{sessions}回</div>
                 <div className="text-xs opacity-90">{formatDuration(duration)}</div>
                 {amount > 0 && <div className="text-xs opacity-90">{formatAmount(amount)}</div>}

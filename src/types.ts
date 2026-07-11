@@ -1,4 +1,5 @@
-export type User = 'けんしん' | 'れな';
+export type User = 'kenshin' | 'rena';
+export const USER_LABELS: Record<User, string> = { kenshin: 'けんしん', rena: 'れな' };
 
 export interface HobbyGoals {
   monthlyHours: number;

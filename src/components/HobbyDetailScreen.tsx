@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   Legend, ResponsiveContainer,
 } from 'recharts';
-import { Hobby, HobbyGoals, HobbyLog, User } from '../types';
+import { Hobby, HobbyGoals, HobbyLog, User, USER_LABELS } from '../types';
 import { formatDuration, formatDate, formatAmount, formatCostPerHour, getLast6Months, currentYYYYMM } from '../utils/format';
 import { calcStreak } from '../utils/streak';
 import TagsModal from './TagsModal';
@@ -24,8 +24,8 @@ interface Props {
 }
 
 const USER_COLORS: Record<User, string> = {
-  けんしん: '#3b82f6',
-  れな: '#ec4899',
+  kenshin: '#3b82f6',
+  rena: '#ec4899',
 };
 
 type ModalState = 'none' | 'menu' | 'tags' | 'goal' | 'deleteConfirm';
@@ -75,16 +75,16 @@ export default function HobbyDetailScreen({
     const ml = logs.filter(l => l.date.startsWith(key));
     return {
       label,
-      けんしん: ml.filter(l => l.user === 'けんしん').reduce((s, l) => s + l.duration, 0),
-      れな: ml.filter(l => l.user === 'れな').reduce((s, l) => s + l.duration, 0),
+      けんしん: ml.filter(l => l.user === 'kenshin').reduce((s, l) => s + l.duration, 0),
+      れな: ml.filter(l => l.user === 'rena').reduce((s, l) => s + l.duration, 0),
     };
   });
   const monthlyAmount = months.map(({ key, label }) => {
     const ml = logs.filter(l => l.date.startsWith(key));
     return {
       label,
-      けんしん: ml.filter(l => l.user === 'けんしん').reduce((s, l) => s + l.amount, 0),
-      れな: ml.filter(l => l.user === 'れな').reduce((s, l) => s + l.amount, 0),
+      けんしん: ml.filter(l => l.user === 'kenshin').reduce((s, l) => s + l.amount, 0),
+      れな: ml.filter(l => l.user === 'rena').reduce((s, l) => s + l.amount, 0),
     };
   });
 
@@ -192,14 +192,14 @@ export default function HobbyDetailScreen({
               <div className="bg-white rounded-xl mt-2 p-3 shadow-sm space-y-2">
                 {/* User filter */}
                 <div className="flex gap-2">
-                  {(['all', 'けんしん', 'れな'] as const).map(u => (
+                  {(['all', 'kenshin', 'rena'] as const).map(u => (
                     <button
                       key={u}
                       onClick={() => setFilterUser(u)}
                       className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${filterUser === u ? 'text-white border-transparent' : 'text-gray-400 border-gray-200'}`}
-                      style={filterUser === u ? { backgroundColor: u === 'けんしん' ? '#3b82f6' : u === 'れな' ? '#ec4899' : hobby.color } : {}}
+                      style={filterUser === u ? { backgroundColor: u === 'kenshin' ? '#3b82f6' : u === 'rena' ? '#ec4899' : hobby.color } : {}}
                     >
-                      {u === 'all' ? '全員' : u}
+                      {u === 'all' ? '全員' : USER_LABELS[u]}
                     </button>
                   ))}
                 </div>
@@ -309,8 +309,8 @@ export default function HobbyDetailScreen({
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip />
                 <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="けんしん" stackId="a" fill={USER_COLORS['けんしん']} />
-                <Bar dataKey="れな" stackId="a" fill={USER_COLORS['れな']} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="けんしん" stackId="a" fill={USER_COLORS['kenshin']} />
+                <Bar dataKey="れな" stackId="a" fill={USER_COLORS['rena']} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -326,8 +326,8 @@ export default function HobbyDetailScreen({
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip />
                   <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
-                  <Bar dataKey="けんしん" stackId="a" fill={USER_COLORS['けんしん']} />
-                  <Bar dataKey="れな" stackId="a" fill={USER_COLORS['れな']} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="けんしん" stackId="a" fill={USER_COLORS['kenshin']} />
+                  <Bar dataKey="れな" stackId="a" fill={USER_COLORS['rena']} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

@@ -1,4 +1,4 @@
-import { Hobby, HobbyLog, User } from '../types';
+import { Hobby, HobbyLog, User, USER_LABELS } from '../types';
 import { formatDuration, currentYYYYMM } from '../utils/format';
 import { calcStreak } from '../utils/streak';
 
@@ -44,7 +44,7 @@ export default function HobbyListScreen({
       <div className="flex items-center justify-between px-5 pt-12 pb-4">
         <div>
           <h1 className="text-xl font-bold text-gray-800">Hobby Ledger</h1>
-          <p className="text-sm text-gray-400">{currentUser}</p>
+          <p className="text-sm text-gray-400">{USER_LABELS[currentUser]}</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={onOpenSettings} className="text-gray-400 text-lg px-1">⚙️</button>

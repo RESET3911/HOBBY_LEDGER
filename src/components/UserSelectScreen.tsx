@@ -1,12 +1,12 @@
-import { User } from '../types';
+import { User, USER_LABELS } from '../types';
 
 interface Props {
   onSelect: (user: User) => void;
 }
 
 const USERS: { user: User; emoji: string; from: string; to: string }[] = [
-  { user: 'けんしん', emoji: '🧑', from: '#3b82f6', to: '#1d4ed8' },
-  { user: 'れな', emoji: '👩', from: '#ec4899', to: '#be185d' },
+  { user: 'kenshin' as const, emoji: '🧑', from: '#3b82f6', to: '#1d4ed8' },
+  { user: 'rena' as const, emoji: '👩', from: '#ec4899', to: '#be185d' },
 ];
 
 export default function UserSelectScreen({ onSelect }: Props) {
@@ -30,7 +30,7 @@ export default function UserSelectScreen({ onSelect }: Props) {
             style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}
           >
             <div className="text-4xl mb-2">{emoji}</div>
-            <div className="text-xl font-bold">{user}</div>
+            <div className="text-xl font-bold">{USER_LABELS[user]}</div>
           </button>
         ))}
       </div>

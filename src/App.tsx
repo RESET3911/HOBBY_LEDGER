@@ -1,3 +1,4 @@
+import { loadUser, saveUser } from './shared/users';
 import { useState, useEffect, useCallback } from 'react';
 import { Hobby, HobbyGoals, HobbyLedgerSettings, HobbyLog, User } from './types';
 import {
@@ -18,7 +19,7 @@ import Toast from './components/Toast';
 type Screen = 'userSelect' | 'hobbyList' | 'hobbyDetail' | 'addLog' | 'dashboard' | 'yearSummary';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => loadUser());
   const [screen, setScreen] = useState<Screen>('userSelect');
   const [selectedHobbyId, setSelectedHobbyId] = useState<string | null>(null);
   const [editLogId, setEditLogId] = useState<string | null>(null);
@@ -41,6 +42,7 @@ export default function App() {
   }, []);
 
   const handleSelectUser = (user: User) => {
+    saveUser(user);
     setCurrentUser(user);
     setScreen('hobbyList');
   };
